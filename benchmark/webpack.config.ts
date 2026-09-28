@@ -93,6 +93,14 @@ const mainConfig = (env: unknown, argv: WebpackArgv): Configuration => {
     <head>
       <meta charset="utf-8">
       <title>Foxglove Studio Benchmark</title>
+      <style type="text/css">
+        body {
+          margin: 0;
+        }
+        #root {
+          height: 100vh;
+        }
+      </style>
     </head>
     <script>
       global = globalThis;

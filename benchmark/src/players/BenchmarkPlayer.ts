@@ -22,6 +22,8 @@ import {
 } from "@foxglove/studio-base/players/types";
 import delay from "@foxglove/studio-base/util/delay";
 
+import { summarize } from "../stats";
+
 const log = Log.getLogger(__filename);
 
 const DEFAULT_CACHE_SIZE_BYTES = 1.0e9;
@@ -65,7 +67,7 @@ class BenchmarkPlayer implements Player {
     throw new Error("Method not implemented.");
   }
   public setGlobalVariables(_globalVariables: GlobalVariables): void {
-    throw new Error("Method not implemented.");
+    // no-op
   }
 
   async #run() {
@@ -290,16 +292,11 @@ class BenchmarkPlayer implements Player {
 }
 
 function getFrameStats(frames: number[]) {
-  const totalFrameMs = frames.reduce((a, b) => a + b, 0);
-  const avgFrameMs = totalFrameMs / frames.length;
-
-  const sortedFrameMs = frames.sort();
-  const medianFrameMs = sortedFrameMs[Math.floor(sortedFrameMs.length * 0.5)]!;
-  const p90FrameMs = sortedFrameMs[Math.floor(sortedFrameMs.length * 0.9)]!;
+  const { mean, p50, p90 } = summarize(frames);
   return {
-    avgFrameMs,
-    medianFrameMs,
-    p90FrameMs,
+    avgFrameMs: mean,
+    medianFrameMs: p50,
+    p90FrameMs: p90,
   };
 }
 

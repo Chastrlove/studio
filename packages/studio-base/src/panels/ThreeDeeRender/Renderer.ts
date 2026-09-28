@@ -52,6 +52,7 @@ import { Input } from "./Input";
 import { DEFAULT_MESH_UP_AXIS, ModelCache } from "./ModelCache";
 import { PickedRenderable, Picker } from "./Picker";
 import type { Renderable } from "./Renderable";
+import { getRendererFrameStatsListener } from "./RendererFrameStats";
 import { SceneExtension } from "./SceneExtension";
 import { SceneExtensionConfig } from "./SceneExtensionConfig";
 import { ScreenOverlay } from "./ScreenOverlay";
@@ -230,6 +231,10 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   public labelPool = new LabelPool({ fontFamily: fontMonospace });
   public markerPool = new MarkerPool(this);
   public sharedGeometry = new SharedGeometry();
+
+  static #nextStatsId = 0;
+  readonly #statsId = Renderer.#nextStatsId++;
+  #gpuSyncPixel = new Uint8Array(4);
 
   #prevResolution = new THREE.Vector2();
   #pickingEnabled = false;
@@ -1152,7 +1157,10 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
   #frameHandler = (currentTime: bigint): void => {
     this.#rendering = true;
     this.currentTime = currentTime;
+    const statsListener = getRendererFrameStatsListener();
+    const frameStartMs = statsListener ? performance.now() : 0;
     this.#handleSubscriptionQueues();
+    const messagesEndMs = statsListener ? performance.now() : 0;
     this.#updateFrameErrors();
     this.#updateFixedFrameId();
     this.#updateResolution();
@@ -1185,8 +1193,38 @@ export class Renderer extends EventEmitter<RendererEvents> implements IRenderer 
 
     this.emit("endFrame", currentTime, this);
 
+    if (statsListener) {
+      this.#reportFrameStats(statsListener, frameStartMs, messagesEndMs);
+    }
+
     this.gl.info.reset();
   };
+
+  #reportFrameStats(
+    statsListener: NonNullable<ReturnType<typeof getRendererFrameStatsListener>>,
+    frameStartMs: number,
+    messagesEndMs: number,
+  ): void {
+    const renderEndMs = performance.now();
+    let gpuEndMs = renderEndMs;
+    if (statsListener.waitForGpu) {
+      // Reading back a pixel blocks until the GPU has executed all previously submitted commands
+      const gl = this.gl.getContext();
+      gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, this.#gpuSyncPixel);
+      gpuEndMs = performance.now();
+    }
+    const { render } = this.gl.info;
+    statsListener.onFrame(this.#statsId, {
+      messageProcessingMs: messagesEndMs - frameStartMs,
+      renderMs: renderEndMs - messagesEndMs,
+      gpuWaitMs: gpuEndMs - renderEndMs,
+      totalMs: gpuEndMs - frameStartMs,
+      drawCalls: render.calls,
+      triangles: render.triangles,
+      points: render.points,
+      lines: render.lines,
+    });
+  }
 
   /** iterates through all subscription message queues, processes them, and calls their handler for each message in the frame */
   #handleSubscriptionQueues(): void {

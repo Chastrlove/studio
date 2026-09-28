@@ -17,21 +17,25 @@ import { LAYOUTS } from "./layouts";
 import {
   PointcloudPlayer,
   SinewavePlayer,
+  ThreeDeePlayer,
   TransformPlayer,
   TransformPreloadingPlayer,
 } from "./players";
 import { MemoryAppConfiguration } from "./services";
+import { makeThreeDeeLayout } from "./threeDee/layout";
+import { parseThreeDeeParams } from "./threeDee/params";
 
 export function Root(): JSX.Element {
-  const [appConfiguration] = useState(
-    () =>
-      new MemoryAppConfiguration({
-        defaults: {
-          [AppSetting.LAUNCH_PREFERENCE]: LaunchPreferenceValue.WEB,
-          [AppSetting.MESSAGE_RATE]: 240,
-        },
-      }),
-  );
+  const [threeDeeParams] = useState(() => parseThreeDeeParams(window.location.search));
+  const [appConfiguration] = useState(() => {
+    const isThreeDee = new URLSearchParams(window.location.search).get("ds") === "threedee";
+    return new MemoryAppConfiguration({
+      defaults: {
+        [AppSetting.LAUNCH_PREFERENCE]: LaunchPreferenceValue.WEB,
+        [AppSetting.MESSAGE_RATE]: isThreeDee ? threeDeeParams.rate : 240,
+      },
+    });
+  });
 
   const dataSources: IDataSourceFactory[] = useMemo(() => {
     const sources = [
@@ -48,10 +52,15 @@ export function Root(): JSX.Element {
         TransformPreloadingPlayer,
         LAYOUTS.transformPreloading,
       ),
+      new SyntheticDataSourceFactory(
+        "threedee",
+        ThreeDeePlayer,
+        makeThreeDeeLayout(threeDeeParams),
+      ),
     ];
 
     return sources;
-  }, []);
+  }, [threeDeeParams]);
 
   const url = new URL(window.location.href);
 

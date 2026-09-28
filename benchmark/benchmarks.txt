@@ -3,3 +3,12 @@ http://localhost:8080/?ds=pointcloud
 http://localhost:8080/?ds=pointcloud
 http://localhost:8080/?ds=transform
 http://localhost:8080/?ds=transformpreloading
+http://localhost:8080/?ds=threedee
+http://localhost:8080/?ds=threedee&preset=pointclouds
+http://localhost:8080/?ds=threedee&preset=entities
+http://localhost:8080/?ds=threedee&preset=texts
+http://localhost:8080/?ds=threedee&preset=laserscans
+http://localhost:8080/?ds=threedee&preset=grid
+http://localhost:8080/?ds=threedee&preset=transforms
+http://localhost:8080/?ds=threedee&preset=panels1
+http://localhost:8080/?ds=threedee&preset=panels9

@@ -11,9 +11,13 @@ import PointcloudRawMessageAnd3d from "./layouts/PointcloudRawMessageAnd3d.json"
 import SinewaveSinglePlot from "./layouts/SinewaveSinglePlot.json";
 import TransformPreloading from "./layouts/TransformPreloading.json";
 
-function makeLayoutData(partialData: Pick<LayoutData, "configById">): LayoutData {
+function makeLayoutData(
+  partialData: Pick<LayoutData, "configById"> & { layout?: unknown },
+): LayoutData {
   return {
     configById: partialData.configById,
+    // JSON imports widen the mosaic direction to `string`
+    layout: partialData.layout as LayoutData["layout"],
     globalVariables: {},
     userNodes: {},
   };
